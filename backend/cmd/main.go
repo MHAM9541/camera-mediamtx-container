@@ -77,15 +77,15 @@ func main() {
 func createTLSConfig() *tls.Config {
 	// Load server certificate & key
 	cert, err := tls.LoadX509KeyPair(
-		"./certs/crt/client_chain.crt",
-		"./certs/private/client_decrypted.key",
+		"/app/backend-certs/crt/client_chain.crt",
+		"/app/backend-certs/private/client_decrypted.key",
 	)
 	if err != nil {
 		log.Fatalf("Failed to load server certificate: %v", err)
 	}
 
 	// Load CA certs to verify connecting clients
-	caCert, err := ioutil.ReadFile("./certs/ca_chain.crt")
+	caCert, err := ioutil.ReadFile("/app/backend-certs/ca_chain.crt")
 	if err != nil {
 		log.Fatalf("Failed to read CA cert: %v", err)
 	}

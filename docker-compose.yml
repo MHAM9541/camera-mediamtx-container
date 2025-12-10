@@ -17,7 +17,7 @@ services:
       - "8883:8883"
     volumes:
       - ./mosquitto/tls-mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/certs:/mosquitto/certs
+      - /opt/camera-app/certs:/mosquitto/certs:ro,Z
     restart: unless-stopped
 
   mediamtx:
@@ -49,8 +49,8 @@ services:
       - mosquitto
       - mediamtx
     volumes:
-      - ./backend/certs:/app/certs:ro
-      - ./captures:/app/captures
+      - /opt/camera-app/captures:/app/captures
+      - /opt/camera-app/backend-certs:/app/backend-certs
     environment:
       MQTT_BROKER_HOST: "camera-mosquitto"
       MQTT_BROKER_PORT: "8883"
