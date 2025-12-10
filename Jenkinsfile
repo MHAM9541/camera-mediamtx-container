@@ -4,8 +4,8 @@ pipeline {
 
   environment {
     // change these to your registry or leave blank to skip push stage
-    REGISTRY = credentials('registry-url') // optional: store registry URL in Jenkins as secret text
-    REGISTRY_CRED = 'registry-credentials-id' // Jenkins credentials id for registry (username/password)
+    // REGISTRY = credentials('registry-url') // optional: store registry URL in Jenkins as secret text
+    // REGISTRY_CRED = 'registry-credentials-id' // Jenkins credentials id for registry (username/password)
     GIT_BRANCH = "${env.BRANCH_NAME ?: 'main'}"
     IMAGE_TAG = "${env.BUILD_NUMBER ?: 'local'}"
     NETWORK_NAME = "camera-net"
@@ -97,8 +97,10 @@ pipeline {
 
   post {
     always {
-      echo "Cleaning up dangling images (best effort)"
-      sh "podman image prune -f || true"
+      node{
+        echo "Cleaning up dangling images (best effort)"
+        sh "podman image prune -f || true"
+      }
     }
     success {
       echo "Pipeline succeeded."
