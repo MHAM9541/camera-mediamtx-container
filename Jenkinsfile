@@ -28,7 +28,7 @@ pipeline {
     stage('Build images (Podman)') {
       steps {
         // Build in sequence. Use --no-cache if you want fresh builds.
-        sh '''
+        sh '''#!/bin/bash
           set -euo pipefail
           echo "Building images..."
           podman build -t camera-mosquitto:${IMAGE_TAG} ./mosquitto
@@ -41,7 +41,7 @@ pipeline {
 
     stage('Create network (if missing)') {
       steps {
-        sh '''
+        sh '''#!/bin/bash
           set -euo pipefail
           podman network inspect ${NETWORK_NAME} >/dev/null 2>&1 || podman network create ${NETWORK_NAME}
           podman network ls | grep ${NETWORK_NAME} || true
@@ -51,7 +51,7 @@ pipeline {
 
     stage('Basic smoke test (container run)') {
       steps {
-        sh '''
+        sh '''#!/bin/bash
           set -euo pipefail
           # Quick smoke: run backend container in ephemeral mode to ensure binary runs
           podman run --rm --network ${NETWORK_NAME} --entrypoint /bin/sh camera-backend:${IMAGE_TAG} -c 'echo "backend smoke OK"'
@@ -61,7 +61,7 @@ pipeline {
 
     stage('Build Debian package') {
       steps {
-        sh '''
+        sh '''#!/bin/bash
           set -euo pipefail
           ./ci-scripts/build_deb.sh ${IMAGE_TAG}
         '''
