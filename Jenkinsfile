@@ -74,7 +74,7 @@ pipeline {
       }
     }
 
-    stage('Push images to registry (optional)') {
+/*     stage('Push images to registry (optional)') {
       when {
         expression { return env.REGISTRY != null && env.REGISTRY != '' }
       }
@@ -92,7 +92,7 @@ pipeline {
           '''
         }
       }
-    }
+    } */
   }
 
   post {
