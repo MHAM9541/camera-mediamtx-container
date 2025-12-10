@@ -97,10 +97,8 @@ pipeline {
 
   post {
     always {
-      node {
-        echo "Cleaning up dangling images (best effort)"
-        sh "podman image prune -f || true"
-      }
+      echo "Cleaning up dangling images (best effort)"
+      sh "podman image prune -f || true"
     }
     success {
       echo "Pipeline succeeded."
