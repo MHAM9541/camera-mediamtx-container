@@ -1,0 +1,25 @@
+cat > .gitignore <<'EOF'
+# OS files
+.DS_Store
+Thumbs.db
+
+# Podman / compose artifacts
+packaging/dist/
+packaging/build/
+
+# Captured media and runtime
+captures/
+*.log
+
+# Secrets and certs (do NOT commit these)
+**/certs/
+certs/
+backend/certs/
+flutter_frontend/certs/
+mosquitto/certs/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+EOF

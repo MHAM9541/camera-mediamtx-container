@@ -1,0 +1,58 @@
+version: "3.9"
+
+networks:
+  camera-net:
+    external: true   # Use the network you created manually
+
+services:
+  mosquitto:
+    container_name: camera-mosquitto
+    build:
+      context: ./mosquitto
+      dockerfile: Dockerfile
+    networks:
+      - camera-net
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+    volumes:
+      - ./mosquitto/tls-mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/certs:/mosquitto/certs
+    restart: unless-stopped
+
+  mediamtx:
+    container_name: camera-mediamtx
+    build:
+      context: ./mediamtx
+      dockerfile: Dockerfile
+    networks:
+      - camera-net
+    ports:
+      - "8554:8554"
+      - "8888:8888"
+      - "8889:8889"
+    volumes:
+      - ./mediamtx/mediamtx.yml:/app/mediamtx.yml
+    restart: unless-stopped
+
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    privileged: true
+    networks:
+      - camera-net
+    devices:
+      - /dev/video0:/dev/video0
+    depends_on:
+      - mosquitto
+      - mediamtx
+    volumes:
+      - ./backend/certs:/app/certs:ro
+      - ./captures:/app/captures
+    environment:
+      MQTT_BROKER_HOST: "camera-mosquitto"
+      MQTT_BROKER_PORT: "8883"
+      MEDIA_MTX_HOST: "camera-mediamtx:8554"
+    restart: unless-stopped

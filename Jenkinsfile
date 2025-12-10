@@ -1,0 +1,110 @@
+// Jenkinsfile - Declarative pipeline for building images, running basic checks, building .deb, archiving
+pipeline {
+  agent any
+
+  environment {
+    // change these to your registry or leave blank to skip push stage
+    REGISTRY = credentials('registry-url') // optional: store registry URL in Jenkins as secret text
+    REGISTRY_CRED = 'registry-credentials-id' // Jenkins credentials id for registry (username/password)
+    GIT_BRANCH = "${env.BRANCH_NAME ?: 'main'}"
+    IMAGE_TAG = "${env.BUILD_NUMBER ?: 'local'}"
+    NETWORK_NAME = "camera-net"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Prepare') {
+      steps {
+        echo "Ensure helper scripts are executable"
+        sh "chmod +x ./ci-scripts/run.sh ./ci-scripts/build_deb.sh ./ci-scripts/deploy.sh || true"
+      }
+    }
+
+    stage('Build images (Podman)') {
+      steps {
+        // Build in sequence. Use --no-cache if you want fresh builds.
+        sh '''
+          set -euo pipefail
+          echo "Building images..."
+          podman build -t camera-mosquitto:${IMAGE_TAG} ./mosquitto
+          podman build -t camera-mediamtx:${IMAGE_TAG} ./mediamtx
+          podman build -t camera-backend:${IMAGE_TAG} ./backend
+          podman build -t camera-frontend:${IMAGE_TAG} ./flutter_frontend
+        '''
+      }
+    }
+
+    stage('Create network (if missing)') {
+      steps {
+        sh '''
+          set -euo pipefail
+          podman network inspect ${NETWORK_NAME} >/dev/null 2>&1 || podman network create ${NETWORK_NAME}
+          podman network ls | grep ${NETWORK_NAME} || true
+        '''
+      }
+    }
+
+    stage('Basic smoke test (container run)') {
+      steps {
+        sh '''
+          set -euo pipefail
+          # Quick smoke: run backend container in ephemeral mode to ensure binary runs
+          podman run --rm --network ${NETWORK_NAME} --entrypoint /bin/sh camera-backend:${IMAGE_TAG} -c 'echo "backend smoke OK"'
+        '''
+      }
+    }
+
+    stage('Build Debian package') {
+      steps {
+        sh '''
+          set -euo pipefail
+          ./ci-scripts/build_deb.sh ${IMAGE_TAG}
+        '''
+      }
+    }
+
+    stage('Archive artifacts') {
+      steps {
+        archiveArtifacts artifacts: 'packaging/dist/*.deb', fingerprint: true
+      }
+    }
+
+    stage('Push images to registry (optional)') {
+      when {
+        expression { return env.REGISTRY != null && env.REGISTRY != '' }
+      }
+      steps {
+        withCredentials([usernamePassword(credentialsId: env.REGISTRY_CRED, usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+          sh '''
+            set -euo pipefail
+            echo "Logging in to registry..."
+            podman login ${REGISTRY} -u "${REG_USER}" -p "${REG_PASS}"
+            podman tag camera-backend:${IMAGE_TAG} ${REGISTRY}/camera-backend:${IMAGE_TAG}
+            podman tag camera-backend:${IMAGE_TAG} ${REGISTRY}/camera-backend:latest
+            podman push ${REGISTRY}/camera-backend:${IMAGE_TAG}
+            podman push ${REGISTRY}/camera-backend:latest
+            # repeat for other images if desired
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "Cleaning up dangling images (best effort)"
+      sh "podman image prune -f || true"
+    }
+    success {
+      echo "Pipeline succeeded."
+    }
+    failure {
+      echo "Pipeline failed. See logs."
+    }
+  }
+}

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Control Dashboard</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="hls.min.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0f7fa, #e9ecef);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            padding: 10px;
+            gap: 10px;
+            box-sizing: border-box;
+        }
+
+        /* --- Left Column: Preview + Logs --- */
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            flex: 0 0 60%;
+            gap: 10px;
+        }
+
+        .preview-container {
+            height: 55%;
+            background: #007bff10;
+            border-radius: 12px;
+            border: 3px solid #007bff;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        #log {
+            height: 40%;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 0.8em;
+            line-height: 1.3;
+            overflow-y: auto;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+        }
+
+        #log::-webkit-scrollbar { width: 6px; }
+        #log::-webkit-scrollbar-thumb { background: #007bff60; border-radius: 3px; }
+        #log::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+
+        /* --- Right Column: Controls --- */
+        .right-column {
+            flex: 0 0 35%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .panel h2 {
+            margin: 0 0 5px 0;
+            font-size: 1em;
+            color: #007bff;
+        }
+
+        label {
+            margin: 3px 0;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: #007bff30;
+            border-radius: 6px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+
+        .auto-manual-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .auto-manual-buttons button {
+            flex: 1;
+            padding: 6px 8px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            background: #17a2b8;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .auto-manual-buttons button:hover { background: #117a8b; }
+
+        button {
+            padding: 6px 10px;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 6px;
+            border: none;
+            background: #28a745;
+            color: #fff;
+        }
+        button:hover { background: #218838; }
+
+        .action-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .action-group input[type="number"] {
+            width: 50px;
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Left column: Preview + Logs -->
+    <div class="left-column">
+        <div class="preview-container">
+            <video id="live-stream-player" class="preview" autoplay muted playsinline controls></video>
+            <img id="capture-preview" class="preview" style="position:absolute; top:0; left:0; display:none;" alt="Captured Image Preview">
+        </div>
+        <div id="log"></div>
+    </div>
+
+    <!-- Right column: Controls -->
+    <div class="right-column">
+        <div class="panel">
+            <h2>Actions</h2>
+            <div class="action-group">
+                <button onclick="sendActionWithCountdown('picture',3)">📸 Take Picture</button>
+                <input type="number" id="record_duration" value="5" min="1" max="60">
+                <button onclick="toggleRecording()">⏺ Start/Stop Record</button>
+            </div>
+
+            <h2>Primary Settings</h2>
+            <label>Brightness</label><input type="range" id="brightness" min="0" max="255" value="128" oninput="debouncedSendSetting('brightness', this.value)">
+            <label>Contrast</label><input type="range" id="contrast" min="0" max="255" value="128" oninput="debouncedSendSetting('contrast', this.value)">
+            <label>Sharpness</label><input type="range" id="sharpness" min="0" max="255" value="128" oninput="debouncedSendSetting('sharpness', this.value)">
+            <label>Saturation</label><input type="range" id="saturation" min="0" max="255" value="128" oninput="debouncedSendSetting('saturation', this.value)">
+
+            <h2>Advanced Settings</h2>
+            <label>Pan</label><input type="range" id="pan" min="-36000" max="36000" value="0" oninput="debouncedSendSetting('pan_absolute', this.value)">
+            <label>Focus</label>
+            <div class="auto-manual-buttons">
+                <button onclick="sendSetting('focus_automatic_continuous',0)">Manual</button>
+                <button onclick="sendSetting('focus_automatic_continuous',1)">Auto</button>
+            </div>
+            <input type="range" id="focus" min="0" max="250" value="0" oninput="sendSetting('focus_absolute', this.value)">
+            <label>White Balance</label>
+            <div class="auto-manual-buttons">
+                <button onclick="sendSetting('white_balance_automatic',0)">Manual</button>
+                <button onclick="sendSetting('white_balance_automatic',1)">Auto</button>
+            </div>
+            <input type="range" id="white_balance" min="2000" max="6500" value="4000" oninput="debouncedSendSetting('white_balance_temperature', this.value)">
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- JS SETUP ---
+    const client = mqtt.connect("ws://127.0.0.1:8083")
+    const ActionTopic = "camera/control/action"
+    const SettingsTopic = "camera/control/settings"
+    const StatusTopic = "camera/status"
+    const logBox = document.getElementById("log")
+    const preview = document.getElementById("capture-preview")
+
+    // Debounce Utility Function
+    function debounce(func, delay) {
+        let timeoutId;
+        return function(...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+
+    // Function to handle showing the static preview and pausing the stream
+    function showStaticPreview(filePath) {
+        const livePlayer = document.getElementById('live-stream-player');
+        const staticPreview = document.getElementById('capture-preview');
+
+        livePlayer.pause(); // Pause the live feed
+        
+        staticPreview.src = "file://" + filePath + "?t=" + new Date().getTime(); // Set static source
+        staticPreview.style.display = 'block'; // Show static overlay
+
+        // Resume the live feed after 5 seconds (HLS has latency, so 5s is fine)
+        setTimeout(() => {
+            staticPreview.style.display = 'none';
+            livePlayer.play();
+        }, 5000); 
+    }
+
+    // Debounced function definition
+    const debouncedSendSetting = debounce(function(control, value) {
+        sendSetting(control, value);
+    }, 50);
+
+    let recording = false
+
+    // --- CORE FUNCTIONS ---
+
+    function sendSetting(control, value){
+        client.publish(SettingsTopic, `${control} ${value}`, {qos: 0, retain: false})
+        logBox.innerHTML += `[UI] ${control} -> ${value}<br>`
+    }
+
+    function sendActionWithCountdown(action, count){
+        let i=count
+        const interval = setInterval(()=>{
+            logBox.innerHTML += `Countdown: ${i}<br>`
+            i--
+            if(i<=0){
+                clearInterval(interval)
+                client.publish(ActionTopic, action, {qos: 0, retain: false}) 
+            }
+        },1000)
+    }
+
+    function startLiveStream() {
+        const videoElement = document.getElementById('live-stream-player');
+        const webRtcUrl = 'ws://localhost:8888/webcam/ws'; 
+        
+        // Use the HTTP port (8080 by default) for the HLS stream
+        //const hlsUrl = 'http://127.0.0.1:8888/webcam/stream.m3u8';
+        const hlsUrl = 'http://127.0.0.1:8888/webcam/index.m3u8';
+
+        if (Hls.isSupported()) { // Hls is the global object provided by hls.js
+            var hls = new Hls();
+            hls.loadSource(hlsUrl);
+            hls.attachMedia(videoElement);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                videoElement.play();
+            });
+            logBox.innerHTML += `[INFO] HLS.js player initialized for: ${hlsUrl}<br>`;
+        } else {
+            logBox.innerHTML += "[CRITICAL] HLS.js not supported or script missing. Video will not stream.<br>";
+        }
+    }
+
+    // --- CRITICAL FIX: REVISED toggleRecording FUNCTION ---
+    function toggleRecording(){
+        /*
+        const STARTUP_DELAY = 3; // Fixed 3-second delay for stream stabilization
+
+        if(!recording){
+            let i = STARTUP_DELAY;
+            let intervalId;
+
+            logBox.innerHTML += "[UI] Starting countdown for recording...<br>";
+            
+            // Start the countdown loop
+            intervalId = setInterval(()=>{
+                logBox.innerHTML += `Countdown: ${i}<br>`;
+                i--;
+
+                if(i < 0){
+                    clearInterval(intervalId);
+                    
+                    // Countdown complete: Send the record command after the delay
+                    const dur = document.getElementById("record_duration").value;
+                    client.publish(ActionTopic, `record ${dur}`, {qos: 0, retain: false}); 
+                    recording = true; // Set recording state immediately after sending command
+                    logBox.innerHTML += "Recording command sent.<br>";
+                }
+            },1000);
+            */
+	if(!recording){
+	    const dur = document.getElementById("record_duration").value;
+	    client.publish(ActionTopic, `record ${dur}`, {qos:0, retain:false}); 
+	    logBox.innerHTML += "[UI] Recording command sent. Waiting for camera readiness...<br>";
+	    recording = true;
+
+        } else {
+            // Stop recording
+            client.publish(ActionTopic, "stop", {qos: 0, retain: false});
+            // State will be set to false via the ASYNC_STOP_COMPLETE message from Go,
+            // but we set it here temporarily to prevent double-sends.
+            recording = false; 
+        }
+    }
+
+    // --- MQTT HANDLERS ---
+
+    client.on("connect", () => {
+        logBox.innerHTML += "[INFO] Connected to MQTT broker<br>"
+        client.subscribe(StatusTopic)
+    })
+
+    client.on("message", (topic, message) => {
+        if(topic === StatusTopic){
+            const msg = message.toString()
+            logBox.innerHTML += `[${new Date().toLocaleTimeString()}] ${msg}<br>`
+            logBox.scrollTop = logBox.scrollHeight
+
+            if (msg.includes("The Recording Stops Now!")) {
+                recording = false;
+                logBox.innerHTML += `[UI] Local state reset to OFF.<br>`;
+            }
+
+            let filePath = "";
+            
+            if(msg.includes("SUCCESS: Image saved to ") || msg.includes("Recording stopped:")){
+                // Extract the path from either success message
+                filePath = msg.split(" ").pop();
+
+                showStaticPreview(filePath);
+                
+                preview.src = "file://" + filePath + "?t=" + new Date().getTime();
+                
+                // Add a clickable download link for the file
+                logBox.innerHTML += `<div style="font-weight: bold; margin-top: 5px;">
+                    <a href="file://${filePath}" download="${filePath.split('/').pop()}" target="_blank">
+                        💾 Click here to download file copy.
+                    </a>
+                </div>`;
+            }
+        }
+    })
+
+    client.on("error", (err) => {
+        logBox.innerHTML += `[ERROR] MQTT Connection Error: ${err.message}<br>`;
+    });
+
+    // Call this function when the page is fully loaded
+    window.onload = startLiveStream;
+
+</script>
+</body>
+</html>
