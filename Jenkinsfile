@@ -34,7 +34,6 @@ pipeline {
           podman build -t camera-mosquitto:${IMAGE_TAG} ./mosquitto
           podman build -t camera-mediamtx:${IMAGE_TAG} ./mediamtx
           podman build -t camera-backend:${IMAGE_TAG} ./backend
-          podman build -t camera-frontend:${IMAGE_TAG} ./flutter_frontend
         '''
       }
     }
