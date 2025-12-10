@@ -37,9 +37,6 @@ RUN apt-get update && apt-get install -y \
 # Copy backend binary
 COPY --from=builder /app/backend .
 
-# Copy certs folder
-COPY certs ./certs
-
 # Make captures directory ahead of time (in case)
 RUN mkdir -p /app/captures
 
