@@ -75,7 +75,7 @@ pipeline {
     stage('Deploy to Test') {
         steps {
             echo "Deploying to test server..."
-            sshagent (credentials: ['deploy-ssh-key']) {
+            sshagent (credentials: ['deploy-ssh-key-jetson']) {
                 sh '''#!/bin/bash
                   set -euo pipefail
 
@@ -113,7 +113,7 @@ pipeline {
     }
     stage('Test SSH (withCredentials)') {
         steps {
-            withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+            withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh-key-jetson', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
                 sh '''#!/bin/bash
                     chmod 600 "$SSH_KEY"
                     echo "Verifying deployment files on test server..."
