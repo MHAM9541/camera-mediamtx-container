@@ -80,6 +80,7 @@ pipeline {
                   set -euo pipefail
 
                   echo "Saving ARM64 images as tarballs..."
+                  rm -f backend.tar mediamtx.tar mosquitto.tar || true
                   podman save -o backend.tar        camera-backend:${IMAGE_TAG}-arm64
                   podman save -o mediamtx.tar       camera-mediamtx:${IMAGE_TAG}-arm64
                   podman save -o mosquitto.tar      camera-mosquitto:${IMAGE_TAG}-arm64
@@ -91,6 +92,8 @@ pipeline {
                   scp -o StrictHostKeyChecking=no podman-compose.yml jetson@192.168.4.2:/opt/deploy/
 
                   echo "Loading images & restarting containers..."
+                  sed "s|\${IMAGE_TAG}|${IMAGE_TAG}|g" podman-compose.yml > /tmp/podman-compose.yml
+                  scp -o StrictHostKeyChecking=no /tmp/podman-compose.yml jetson@192.168.4.2:/opt/deploy/podman-compose.yml
                   ssh -o StrictHostKeyChecking=no jetson@192.168.4.2 "
                       set -e
                       cd /opt/deploy
