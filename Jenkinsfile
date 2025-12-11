@@ -72,30 +72,59 @@ pipeline {
         archiveArtifacts artifacts: 'packaging/dist/*.deb', fingerprint: true
       }
     }
+    stage('Deploy to Test') {
+        steps {
+            echo "Deploying to test server..."
+            sshagent (credentials: ['deploy-ssh-key']) {
+                sh '''
+                    set -euo pipefail
 
-    /* stage('Deploy to Test') {
-      steps {
-        echo "Deploying to test server..."
-        sshagent (credentials: ['deploy-ssh-key']) {
-          sh '''
-            scp -o StrictHostKeyChecking=no podman-compose.yml mham9541@192.168.4.180:/opt/deploy/podman-compose.yml
-            ssh -o StrictHostKeyChecking=no mham9541@192.168.4.180 "cd /opt/deploy && podman-compose down || true; podman-compose pull || true; podman-compose up -d"
-          '''
+                    echo "Saving ARM64 images as tarballs..."
+                    podman save -o backend.tar        camera-backend:${IMAGE_TAG}-arm64
+                    podman save -o mediamtx.tar       camera-mediamtx:${IMAGE_TAG}-arm64
+                    podman save -o mosquitto.tar      camera-mosquitto:${IMAGE_TAG}-arm64
+
+                    echo "Copying images + compose file to test server..."
+                    scp -o StrictHostKeyChecking=no backend.tar  mham9541@192.168.4.180:/opt/deploy/
+                    scp -o StrictHostKeyChecking=no mediamtx.tar mham9541@192.168.4.180:/opt/deploy/
+                    scp -o StrictHostKeyChecking=no mosquitto.tar mham9541@192.168.4.180:/opt/deploy/
+                    scp -o StrictHostKeyChecking=no podman-compose.yml mham9541@192.168.4.180:/opt/deploy/
+
+                    echo "Loading images & restarting containers..."
+                    ssh -o StrictHostKeyChecking=no mham9541@192.168.4.180 "
+                        set -euo pipefail
+                        cd /opt/deploy
+
+                        echo 'Loading images...'
+                        podman load -i backend.tar
+                        podman load -i mediamtx.tar
+                        podman load -i mosquitto.tar
+
+                        echo 'Starting compose stack...'
+                        podman-compose down || true
+                        podman-compose up -d
+                    "
+                '''
+            }
         }
-      }
     }
     stage('Test SSH (withCredentials)') {
-      steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
-          sh '''
-            # key available as $SSH_KEY and username as $SSH_USER
-            chmod 600 "$SSH_KEY"
-            scp -o StrictHostKeyChecking=no -i "$SSH_KEY" podman-compose.yml ${SSH_USER}@192.168.4.180:/tmp/podman-compose.yml
-            ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@192.168.4.180 "ls -l /tmp/podman-compose.yml; cat /tmp/podman-compose.yml | head -n 10"
-          '''
+        steps {
+            withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+                sh '''
+                    chmod 600 "$SSH_KEY"
+                    echo "Verifying deployment files on test server..."
+                    ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@192.168.4.180 "
+                        ls -l /opt/deploy
+                        podman ps
+                        podman images
+                    "
+                '''
+            }
         }
-      }
-    } */
+    }
+
+    
 /*     stage('Push images to registry (optional)') {
       when {
         expression { return env.REGISTRY != null && env.REGISTRY != '' }
