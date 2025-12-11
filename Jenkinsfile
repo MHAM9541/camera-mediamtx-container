@@ -73,6 +73,29 @@ pipeline {
       }
     }
 
+    stage('Deploy to Test') {
+      steps {
+        echo "Deploying to test server..."
+        sshagent (credentials: ['deploy-ssh-key']) {
+          sh '''
+            scp -o StrictHostKeyChecking=no podman-compose.yml ubuntu@1.2.3.4:/opt/deploy/podman-compose.yml
+            ssh -o StrictHostKeyChecking=no ubuntu@1.2.3.4 "cd /opt/deploy && podman-compose down || true; podman-compose pull || true; podman-compose up -d"
+          '''
+        }
+      }
+    }
+    stage('Test SSH (withCredentials)') {
+      steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'deploy-ssh-key', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+          sh '''
+            # key available as $SSH_KEY and username as $SSH_USER
+            chmod 600 "$SSH_KEY"
+            scp -o StrictHostKeyChecking=no -i "$SSH_KEY" podman-compose.yml ${SSH_USER}@1.2.3.4:/tmp/podman-compose.yml
+            ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@1.2.3.4 "ls -l /tmp/podman-compose.yml; cat /tmp/podman-compose.yml | head -n 10"
+          '''
+        }
+      }
+    }
 /*     stage('Push images to registry (optional)') {
       when {
         expression { return env.REGISTRY != null && env.REGISTRY != '' }
