@@ -73,7 +73,7 @@ pipeline {
       }
     }
 
-    stage('Deploy to Test') {
+    /* stage('Deploy to Test') {
       steps {
         echo "Deploying to test server..."
         sshagent (credentials: ['deploy-ssh-key']) {
@@ -95,7 +95,7 @@ pipeline {
           '''
         }
       }
-    }
+    } */
 /*     stage('Push images to registry (optional)') {
       when {
         expression { return env.REGISTRY != null && env.REGISTRY != '' }
