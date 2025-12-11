@@ -85,13 +85,13 @@ pipeline {
                   podman save -o mosquitto.tar      camera-mosquitto:${IMAGE_TAG}-arm64
 
                   echo "Copying images + compose file to test server..."
-                  scp -o StrictHostKeyChecking=no backend.tar  mham9541@192.168.4.180:/opt/deploy/
-                  scp -o StrictHostKeyChecking=no mediamtx.tar mham9541@192.168.4.180:/opt/deploy/
-                  scp -o StrictHostKeyChecking=no mosquitto.tar mham9541@192.168.4.180:/opt/deploy/
-                  scp -o StrictHostKeyChecking=no podman-compose.yml mham9541@192.168.4.180:/opt/deploy/
+                  scp -o StrictHostKeyChecking=no backend.tar  jetson@192.168.4.2:/opt/deploy/
+                  scp -o StrictHostKeyChecking=no mediamtx.tar jetson@192.168.4.2:/opt/deploy/
+                  scp -o StrictHostKeyChecking=no mosquitto.tar jetson@192.168.4.2:/opt/deploy/
+                  scp -o StrictHostKeyChecking=no podman-compose.yml jetson@192.168.4.2:/opt/deploy/
 
                   echo "Loading images & restarting containers..."
-                  ssh -o StrictHostKeyChecking=no mham9541@192.168.4.180 "
+                  ssh -o StrictHostKeyChecking=no jetson@192.168.4.2 "
                       set -e
                       cd /opt/deploy
 
@@ -114,7 +114,7 @@ pipeline {
                 sh '''#!/bin/bash
                     chmod 600 "$SSH_KEY"
                     echo "Verifying deployment files on test server..."
-                    ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@192.168.4.180 "
+                    ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@192.168.4.2 "
                         ls -l /opt/deploy
                         podman ps
                         podman images
