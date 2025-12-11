@@ -34,7 +34,7 @@ Package: ${PKGNAME}
 Version: ${VERSION}
 Section: misc
 Priority: optional
-Architecture: amd64
+Architecture: arm64
 Depends: podman, podman-compose
 Maintainer: You <you@example.com>
 Description: Camera application bundle (MediaMTX + Mosquitto + Backend + Frontend)
@@ -68,4 +68,4 @@ chmod 755 "${BUILD_DIR}/DEBIAN/postinst"
 
 # Build .deb
 dpkg-deb --build "${BUILD_DIR}" "${DIST_DIR}/${PKGNAME}_${VERSION}_amd64.deb"
-echo "Built ${DIST_DIR}/${PKGNAME}_${VERSION}_amd64.deb"
+echo "Built ${DIST_DIR}/${PKGNAME}_${VERSION}_arm64.deb"
