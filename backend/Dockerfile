@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # Build static binary
-RUN GOOS=linux GOARCH=arm64 go build -o backend ./cmd
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o backend ./cmd
 
 # ---------------------------------------
 # STAGE 2 — Final runtime image
