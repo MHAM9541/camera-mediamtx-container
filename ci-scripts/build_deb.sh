@@ -67,5 +67,5 @@ EOF
 chmod 755 "${BUILD_DIR}/DEBIAN/postinst"
 
 # Build .deb
-dpkg-deb --build "${BUILD_DIR}" "${DIST_DIR}/${PKGNAME}_${VERSION}_amd64.deb"
+dpkg-deb --build "${BUILD_DIR}" "${DIST_DIR}/${PKGNAME}_${VERSION}_arm64.deb"
 echo "Built ${DIST_DIR}/${PKGNAME}_${VERSION}_arm64.deb"

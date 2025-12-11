@@ -62,7 +62,7 @@ pipeline {
       steps {
         sh '''#!/bin/bash
           set -euo pipefail
-          ./ci-scripts/build_deb.sh ${IMAGE_TAG}-arm64
+          ./ci-scripts/build_deb.sh ${IMAGE_TAG}
         '''
       }
     }
