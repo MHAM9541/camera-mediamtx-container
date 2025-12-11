@@ -78,8 +78,8 @@ pipeline {
         echo "Deploying to test server..."
         sshagent (credentials: ['deploy-ssh-key']) {
           sh '''
-            scp -o StrictHostKeyChecking=no podman-compose.yml ubuntu@1.2.3.4:/opt/deploy/podman-compose.yml
-            ssh -o StrictHostKeyChecking=no ubuntu@1.2.3.4 "cd /opt/deploy && podman-compose down || true; podman-compose pull || true; podman-compose up -d"
+            scp -o StrictHostKeyChecking=no podman-compose.yml mham9541@192.168.4.180:/opt/deploy/podman-compose.yml
+            ssh -o StrictHostKeyChecking=no mham9541@192.168.4.180 "cd /opt/deploy && podman-compose down || true; podman-compose pull || true; podman-compose up -d"
           '''
         }
       }
@@ -90,8 +90,8 @@ pipeline {
           sh '''
             # key available as $SSH_KEY and username as $SSH_USER
             chmod 600 "$SSH_KEY"
-            scp -o StrictHostKeyChecking=no -i "$SSH_KEY" podman-compose.yml ${SSH_USER}@1.2.3.4:/tmp/podman-compose.yml
-            ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@1.2.3.4 "ls -l /tmp/podman-compose.yml; cat /tmp/podman-compose.yml | head -n 10"
+            scp -o StrictHostKeyChecking=no -i "$SSH_KEY" podman-compose.yml ${SSH_USER}@192.168.4.180:/tmp/podman-compose.yml
+            ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@192.168.4.180 "ls -l /tmp/podman-compose.yml; cat /tmp/podman-compose.yml | head -n 10"
           '''
         }
       }
