@@ -1,7 +1,7 @@
 # ---------------------------------------
 # STAGE 1 — Build Go binary
 # ---------------------------------------
-FROM --platform=linux/arm64 docker.io/library/golang:1.25-bullseye AS builder
+FROM --platform=linux/arm64 docker.io/library/golang:1.24-bullseye AS builder
 
 WORKDIR /app
 
