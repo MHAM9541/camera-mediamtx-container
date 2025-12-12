@@ -103,6 +103,12 @@ pipeline {
                       podman load -i mediamtx.tar
                       podman load -i mosquitto.tar
 
+                      echo 'tagging images...'
+                      podman tag camera-backend:${IMAGE_TAG}-arm64   camera-backend:latest
+                      podman tag camera-mediamtx:${IMAGE_TAG}-arm64  camera-mediamtx:latest
+                      podman tag camera-mosquitto:${IMAGE_TAG}-arm64 camera-mosquitto:latest
+
+
                       echo 'Starting compose stack...'
                       podman images | grep camera
                       podman-compose -f podman-compose.yml down || true
