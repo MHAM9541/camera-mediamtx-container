@@ -7,7 +7,7 @@ networks:
 services:
   mosquitto:
     container_name: camera-mosquitto
-    image: localhost/camera-mosquitto:${IMAGE_TAG}-arm64
+    image: camera-mosquitto:latest
     networks:
       - camera-net
     ports:
@@ -20,7 +20,7 @@ services:
 
   mediamtx:
     container_name: camera-mediamtx
-    image: localhost/camera-mediamtx:${IMAGE_TAG}-arm64
+    image: camera-mediamtx:latest
     networks:
       - camera-net
     ports:
@@ -33,7 +33,7 @@ services:
 
   backend:
     container_name: backend
-    image: localhost/camera-backend:${IMAGE_TAG}-arm64
+    image: camera-backend:latest
     privileged: true
     networks:
       - camera-net
