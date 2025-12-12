@@ -14,8 +14,8 @@ services:
       - "1883:1883"
       - "8883:8883"
     volumes:
-      - /opt/camera-app/tls-mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - /opt/camera-app/certs:/mosquitto/certs:ro,Z
+      - /opt/camera-app/mosquitto-config:/app/mosquitto/config:Z
+      - /opt/camera-app/mosquitto-certs:/app/mosquitto/certs:Z
     restart: unless-stopped
 
   mediamtx:
