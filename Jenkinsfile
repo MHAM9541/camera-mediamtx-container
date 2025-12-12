@@ -86,17 +86,17 @@ pipeline {
                   podman save -o mosquitto.tar      camera-mosquitto:${IMAGE_TAG}-arm64
 
                   echo "Copying images + compose file to test server..."
-                  scp -o StrictHostKeyChecking=no backend.tar  jetson@192.168.4.2:/opt/deploy/
-                  scp -o StrictHostKeyChecking=no mediamtx.tar jetson@192.168.4.2:/opt/deploy/
-                  scp -o StrictHostKeyChecking=no mosquitto.tar jetson@192.168.4.2:/opt/deploy/
-                  scp -o StrictHostKeyChecking=no podman-compose.yml jetson@192.168.4.2:/opt/deploy/
+                  scp -o StrictHostKeyChecking=no backend.tar  jetson@192.168.4.2:/opt/camera-app/deploy/
+                  scp -o StrictHostKeyChecking=no mediamtx.tar jetson@192.168.4.2:/opt/camera-app/deploy/
+                  scp -o StrictHostKeyChecking=no mosquitto.tar jetson@192.168.4.2:/opt/camera-app/deploy/
+                  scp -o StrictHostKeyChecking=no podman-compose.yml jetson@192.168.4.2:/opt/camera-app/deploy/
 
                   echo "Loading images & restarting containers..."
                   sed "s|\${IMAGE_TAG}|${IMAGE_TAG}|g" podman-compose.yml > /tmp/podman-compose.yml
-                  scp -o StrictHostKeyChecking=no /tmp/podman-compose.yml jetson@192.168.4.2:/opt/deploy/podman-compose.yml
+                  scp -o StrictHostKeyChecking=no /tmp/podman-compose.yml jetson@192.168.4.2:/opt/camera-app/deploy/podman-compose.yml
                   ssh -o StrictHostKeyChecking=no jetson@192.168.4.2 "
                       set -e
-                      cd /opt/deploy
+                      cd /opt/camera-app/deploy
 
                       echo 'Loading images...'
                       podman load -i backend.tar
@@ -105,6 +105,7 @@ pipeline {
 
                       echo 'Starting compose stack...'
                       podman-compose down || true
+                      podman network create camera-net
                       podman-compose up -d
                   "
               '''
@@ -118,7 +119,7 @@ pipeline {
                     chmod 600 "$SSH_KEY"
                     echo "Verifying deployment files on test server..."
                     ssh -o StrictHostKeyChecking=no -i "$SSH_KEY" ${SSH_USER}@192.168.4.2 "
-                        ls -l /opt/deploy
+                        ls -l /opt/camera-app/deploy
                         podman ps
                         podman images
                     "
