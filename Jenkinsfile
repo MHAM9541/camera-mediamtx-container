@@ -104,10 +104,10 @@ pipeline {
                       podman load -i mosquitto.tar
 
                       echo 'Starting compose stack...'
-                      podman images
-                      podman-compose down || true
+                      podman images | grep camera
+                      podman-compose -f podman-compose.yml down || true
                       podman network inspect camera-net >/dev/null 2>&1 || podman network create camera-net
-                      podman-compose up -d
+                      podman-compose -f podman-compose.yml up -d
                   "
               '''
             }
