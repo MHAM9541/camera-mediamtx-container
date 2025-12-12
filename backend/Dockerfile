@@ -1,7 +1,7 @@
 # ---------------------------------------
 # STAGE 1 — Build Go binary
 # ---------------------------------------
-FROM --platform=linux/arm64 golang:1.24-bullseye AS builder
+FROM --platform=linux/arm64 golang:1.25-bullseye AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # Build static binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o backend ./cmd
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o backend ./cmd
 
 # ---------------------------------------
 # STAGE 2 — Final runtime image
